@@ -1,0 +1,7 @@
+# Bỏ qua các file sinh ra trong quá trình biên dịch chéo
+*.i
+*.s
+*.o
+*.elf
+*.bin
+*.hex
