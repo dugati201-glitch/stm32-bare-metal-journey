@@ -248,7 +248,7 @@ ARM để Reserved nhằm:
 
 ### Chức năng
 
-> Ghi chú:
+> Ghi chú:Tuyến đường chuyên dụng nối từ khối Nạp lệnh (Fetch Unit) của CPU đâm thẳng vào Flash để chỉ hút mã lệnh về giải mã.
 
 ---
 
@@ -268,7 +268,7 @@ CPU
 
 ### Chức năng
 
-> Ghi chú:
+> Ghi chú:Tuyến đường nối từ khối Quản lý dữ liệu của CPU đâm vào Flash để chỉ bốc dữ liệu hằng số const về phục vụ tính toán.
 
 ---
 
@@ -281,14 +281,14 @@ D-Code Bus
  ↓
 CPU
 ```
-
+> Lý do tối thượng phải nối cả 2 đường vào Flash: > Đề phòng trường hợp "kẹt xe" nội bộ! Nếu trong lúc CPU đang dùng đường I-Code để nạp câu lệnh tiếp theo từ Flash, mà câu lệnh hiện tại lại yêu cầu lôi một hằng số const cũng nằm trong Flash ra để tính toán.
 ---
 
 ## 2.4 System Bus
 
 ### Chức năng
 
-> Ghi chú:
+> Ghi chú:Tuyến đườg nối Cpu với dữ liệu Ram và ngoại vi như gpio,uart,i2c, spi...
 
 ---
 
@@ -308,7 +308,204 @@ RAM / Peripheral
 
 ### Vì sao phải tách nhiều Bus?
 
-> Ghi chú:
+# Ví dụ CPU thực thi câu lệnh `a = b + 5`
+
+## Bước 1. Biên dịch chương trình
+
+Code C:
+
+```c
+a = b + 5;
+```
+
+Compiler sẽ dịch thành các lệnh máy (Machine Instructions).
+
+Ví dụ:
+
+```text
+LDR
+ADD
+STR
+```
+
+Sau khi Link, các lệnh này được lưu tuần tự trong Flash.
+
+```text
+Flash
+
+0x08000000 : LDR
+0x08000004 : ADD
+0x08000008 : STR
+...
+```
+
+Mỗi lệnh đều có một địa chỉ riêng trong Flash.
+
+---
+
+## Bước 2. CPU lấy lệnh từ Flash
+
+Khi chương trình chạy, thanh ghi **PC (Program Counter)** chứa địa chỉ của lệnh cần thực thi.
+
+Ví dụ
+
+```text
+PC = 0x08000004
+```
+
+CPU sẽ gửi địa chỉ này qua **I-Code Bus**.
+
+```text
+CPU
+ │
+ │ 0x08000004
+ ▼
+I-Code Bus
+ │
+ ▼
+Flash
+ │
+ ▼
+Machine Instruction (ADD)
+```
+
+CPU lấy được lệnh máy và thực hiện các bước:
+
+```text
+Fetch
+
+↓
+
+Decode
+
+↓
+
+Execute
+```
+
+---
+
+## Bước 3. CPU cần dữ liệu
+
+Sau khi giải mã, CPU biết đây là phép cộng.
+
+Ví dụ
+
+```c
+a = b + 5;
+```
+
+CPU nhận ra phải lấy giá trị của biến **b**.
+
+Lúc này CPU sử dụng **System Bus**.
+
+```text
+CPU
+
+↓
+
+System Bus
+
+↓
+
+SRAM
+
+↓
+
+Đọc giá trị của b
+```
+
+Sau đó ALU thực hiện:
+
+```text
+b + 5
+```
+
+Cuối cùng CPU ghi kết quả trở lại SRAM.
+
+```text
+CPU
+
+↓
+
+System Bus
+
+↓
+
+SRAM
+
+↓
+
+Ghi vào biến a
+```
+
+---
+
+## Nếu chỉ có một Bus (Von Neumann)
+
+CPU phải sử dụng cùng một Bus cho cả:
+
+- đọc lệnh từ Flash
+- đọc/ghi dữ liệu trong SRAM
+
+Quá trình sẽ diễn ra tuần tự:
+
+```text
+Đọc lệnh từ Flash
+
+↓
+
+Chờ
+
+↓
+
+Đọc dữ liệu từ SRAM
+
+↓
+
+Chờ
+
+↓
+
+Ghi dữ liệu vào SRAM
+
+↓
+
+Đọc lệnh tiếp theo
+```
+
+Bus luôn bị tranh chấp, CPU phải chờ liên tục.
+
+Hiện tượng này gọi là **Bus Bottleneck**.
+
+---
+
+## Kiến trúc Harvard của Cortex-M
+
+ARM Cortex-M tách thành nhiều Bus độc lập.
+
+```text
+          Flash
+            ▲
+            │
+       I-Code Bus
+            │
+            ▼
+          CPU
+            ▲
+            │
+       System Bus
+            │
+            ▼
+          SRAM
+```
+
+Nhờ đó CPU có thể:
+
+- lấy lệnh tiếp theo từ Flash qua **I-Code Bus**
+- đồng thời đọc hoặc ghi dữ liệu trong SRAM qua **System Bus**
+
+Hai thao tác không cản trở nhau, giúp tăng hiệu năng xử lý.
 
 ---
 
@@ -320,166 +517,8 @@ RAM / Peripheral
 
 ---
 
-# 3. Memory-Mapped Registers
 
-## 3.1 Khái niệm
-
-> Ghi chú:
-
----
-
-## 3.2 Register là gì?
-
-> Ghi chú:
-
----
-
-## 3.3 Memory-Mapped Register là gì?
-
-> Ghi chú:
-
----
-
-## 3.4 ARM quản lý Register như thế nào?
-
-> Ghi chú:
-
----
-
-## 3.5 Ví dụ
-
-```c
-GPIOA->ODR = 1;
-```
-
-CPU thực chất làm gì?
-
-```
-Viết ghi chú tại đây...
-```
-
----
-
-# 4. Base Address
-
-## Khái niệm
-
-> Ghi chú:
-
----
-
-## Ví dụ
-
-| Peripheral | Base Address |
-|------------|--------------|
-| GPIOA | |
-| GPIOB | |
-| RCC | |
-| USART1 | |
-
----
-
-# 5. Truy cập Register
-
-## Ví dụ địa chỉ
-
-```text
-0x4002 0000
-```
-
-Ý nghĩa:
-
-> Ghi chú:
-
----
-
-## Công thức
-
-```text
-Địa chỉ Register
-=
-Base Address
-+
-Offset
-```
-
-Ví dụ
-
-```
-GPIOA_BASE + ODR_OFFSET
-```
-
----
-
-# 6. Liên hệ với thư viện SPL
-
-## Ví dụ
-
-```c
-GPIO_SetBits(GPIOA, GPIO_Pin_5);
-```
-
-### Thực chất bên dưới
-
-> Ghi chú:
-
----
-
-## Vì sao chỉ cần ghi vào địa chỉ là điều khiển được GPIO?
-
-> Ghi chú:
-
----
-
-# 7. Liên hệ với HAL
-
-Ví dụ
-
-```c
-HAL_GPIO_WritePin(...)
-```
-
-Thực chất bên dưới:
-
-> Ghi chú:
-
----
-
-# 8. Liên hệ với Datasheet / Reference Manual
-
-### Khi đọc Datasheet cần tìm gì?
-
-- [ ]
-- [ ]
-- [ ]
-- [ ]
-
----
-
-### Khi đọc Reference Manual cần tìm gì?
-
-- [ ]
-- [ ]
-- [ ]
-- [ ]
-
----
-
-# 9. Ví dụ thực tế
-
-## Ví dụ 1
-
-> Ghi chú:
-
----
-
-## Ví dụ 2
-
-> Ghi chú:
-
----
-
-# 10. Tổng kết
+# 3. Tổng kết
 
 ## Kiến thức đã học
 
@@ -510,16 +549,6 @@ Ghi dữ liệu vào Register
 ```
 
 ---
-
-# ❓ Câu hỏi cần tự trả lời
-
-- Tại sao GPIO lại có địa chỉ bộ nhớ?
-- Vì sao CPU có thể điều khiển LED chỉ bằng một lệnh ghi?
-- Base Address là gì?
-- Offset là gì?
-- Memory-Mapped Register khác RAM ở điểm nào?
-- SPL/HAL cuối cùng có ghi trực tiếp vào Register không?
-- Vì sao Peripheral được coi như một vùng nhớ?
 
 ---
 
