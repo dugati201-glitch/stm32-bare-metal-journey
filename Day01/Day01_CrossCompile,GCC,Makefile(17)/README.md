@@ -361,4 +361,32 @@ I --> J[arm-none-eabi-objcopy]
 J --> K[firmware.hex]
 J --> L[firmware.bin]
 ```
-    
+# 📑 SỔ TAY HỆ THỐNG: BẢN CHẤT GCC ARM TOOLCHAIN & MAKEFILE
+
+## 1. Giải Mã Định Danh "Mật Mã" `arm-none-eabi-`
+[cite_start]Đây là **"Họ và tên lót"** cố định của bộ công cụ biên dịch chéo (Cross-Compiler), chỉ định chính xác môi trường đích[cite: 1313, 1315]:
+* [cite_start]**`arm`**: Kiến trúc phần cứng mục tiêu (Chỉ chạy trên lõi chip ARM như Cortex-M3/M4)[cite: 1316].
+* [cite_start]**`none`**: Hệ điều hành đích là **Không có gì** -> Môi trường **Bare-metal** (Chạy code thô trực tiếp trên phần cứng)[cite: 1318, 1320].
+* [cite_start]**`eabi`**: Embedded Application Binary Interface -> Quy tắc giao tiếp nhị phân chuẩn hóa vùng nhớ và truyền tham số cho hệ thống nhúng[cite: 1321, 1322].
+
+---
+
+## 2. Phân Tách "Tên Riêng" (Hậu Tố) & Cơ Chế Hoạt Động Ngầm
+[cite_start]Bộ công cụ không phải là một phần mềm đơn lẻ, nó là một chuỗi hệ sinh thái phối hợp[cite: 975]:
+
+### 🎼 arm-none-eabi-gcc — Vị "Nhạc Trưởng" (Driver)
+[cite_start]Bản thân `gcc` không tự làm hết mọi việc từ đầu đến cuối mà nó điều phối các phần mềm ngầm chuyên dụng tùy theo **Cờ lệnh (Flags)**[cite: 1344, 1346]:
+* [cite_start]Khi gõ cờ `-E` (Preprocess Only): `gcc` gọi ngầm trình tiền xử lý **`cpp`** để dọn dẹp `#define`, `#include`[cite: 956, 1347].
+* [cite_start]Khi gõ cờ `-S` (Compile Only): `gcc` gọi ngầm trình biên dịch **`cc1`** để dịch code C sang Hợp ngữ `.s`[cite: 903, 1348].
+* [cite_start]Khi gõ cờ `-c` (Assemble Only): **`gcc` lập tức điều phối, gọi ngầm trình hợp dịch `arm-none-eabi-as`** ra để đúc file `.s` thành mã máy cục bộ `.o`[cite: 1341, 1349].
+
+### 🛠️ arm-none-eabi-as — "Thợ Hợp Dịch" (Assembler)
+* [cite_start]**Vai trò ngầm:** Là đứa trực tiếp đổ mồ hôi dịch các câu lệnh chữ gợi nhớ (`MOV`, `LDR`) sang chuỗi nhị phân $0$ và $1$ cho file `.o`[cite: 880, 1351].
+* [cite_start]**Ứng dụng trực tiếp:** Bắt buộc phải gọi đến khi dự án xuất hiện các file **Thuần Hợp Ngữ Assembly** (như file `startup_stm32f4xx.s` dùng để khởi kích nguồn chip)[cite: 1353, 1354]. Những file này không qua ngữ pháp C nên trình `as` sẽ xử lý trực tiếp luôn[cite: 1355, 1356].
+
+### 🔗 arm-none-eabi-ld — "Kỹ Sư Trưởng" (Linker)
+* [cite_start]Gom các file `.o` riêng rẽ lại, đọc cấu hình bộ nhớ của chip (`Linker Script .ld`) để phân bổ chính xác: Hàm/Code nằm ở **Flash**, Biến dữ liệu nằm ở **RAM**, phụt ra file tổng chỉnh `.elf`[cite: 982, 1011, 1012].
+* [cite_start]**Cờ cứu mạng Bare-metal:** `--specs=nosys.specs` -> Tự động chèn các hàm hệ thống rỗng (Stub functions) để thay thế khi chip chạy thô không có hệ điều hành[cite: 1191].
+
+### 🪓 arm-none-eabi-objcopy — "Thợ Cắt Gọt" (Format Converter)
+* [cite_start]Nhận file thực thi `.elf` nặng nề, dùng cờ `-O binary` gọt sạch mọi thông tin rác debug dư thừa, trích xuất ra file **`.bin`** thuần túy siêu nhẹ để sẵn sàng nạp thẳng vào chip STM32[cite: 989, 1030].
