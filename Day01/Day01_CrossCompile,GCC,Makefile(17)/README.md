@@ -300,7 +300,7 @@ So sánh Timestamp
 
 ↓
 
-Dependency mới hơn Target ?
+Dependency mới hơn Target ?     
 
         │
    ┌────┴────┐
