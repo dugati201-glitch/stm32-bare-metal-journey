@@ -1,20 +1,19 @@
-# Bỏ qua các file sinh ra trong quá trình biên dịch chéo
-*.i
-*.s
-*.o
-*.elf
-*.bin
-*.hex
-# Build output
-Objects/
-Listings/
-DebugConfig/
+# Keil
+**/Objects/
+**/Listings/
+**/DebugConfig/
 
-# Keil user files
+# User files
 *.uvoptx
 *.uvguix.*
 
-# Build artifacts
+# Build output
 *.axf
 *.map
 *.lst
+*.hex
+*.bin
+*.elf
+*.o
+*.i
+*.s
