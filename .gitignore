@@ -5,3 +5,16 @@
 *.elf
 *.bin
 *.hex
+# Build output
+Objects/
+Listings/
+DebugConfig/
+
+# Keil user files
+*.uvoptx
+*.uvguix.*
+
+# Build artifacts
+*.axf
+*.map
+*.lst
